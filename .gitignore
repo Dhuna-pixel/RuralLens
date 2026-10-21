@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+node_modules/
+data/generated/*.json
+data/generated/*.tmp
+*.log
+.DS_Store
+Thumbs.db

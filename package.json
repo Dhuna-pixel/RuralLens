@@ -1,0 +1,12 @@
+{
+  "name": "rurallens",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node backend/server.mjs",
+    "dev": "node --watch backend/server.mjs",
+    "generate": "node scripts/generate-data.mjs",
+    "test": "node --test"
+  }
+}
