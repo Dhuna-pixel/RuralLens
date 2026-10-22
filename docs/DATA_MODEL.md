@@ -1,5 +1,11 @@
 # Data model
 
+Default generation creates 10,000 synthetic borrowers with 36 monthly periods. Each generated borrower has one loan record, so product-level borrower counts do not overlap in the current demo even though the aggregation uses stable borrower IDs and supports overlapping counts in future account data. Product exposure totals reconcile to total exposure.
+
+The demo DPD bucket assigns the generated loan exposure once using the highest DPD among its synthetic repayment records. Current 0-DPD loans are excluded from overdue exposure; a record with missing/invalid DPD is left unclassified. This is only an illustrative account-level proxy, not an approved instalment-allocation rule.
+
+NPA classifications, collateral/security details, regulatory rule versions, and existing provisions are not represented in this schema. Consequently NPA exposure and required/existing provision amounts cannot be calculated from the current data.
+
 The generator creates linked synthetic records under an in-memory repository. Identifiers are stable for each seed and no real customer data is used.
 
 | Entity | Key and relationships | Representative fields |

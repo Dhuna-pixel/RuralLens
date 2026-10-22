@@ -12,9 +12,13 @@ Requirements: Node.js 20 or newer. The app uses built-in Node modules and has no
 node backend/server.mjs
 ```
 
-Open <http://localhost:3000>. `npm start` is also available when npm is installed. Default settings use 10,000 borrowers, 18 monthly periods, seed 42, local analytics, and a deterministic fallback investigation service.
+Open <http://localhost:3000>. On the first run, the server prints a one-time administrator setup token in its terminal. Enter that token on the sign-in page and choose an administrator username and password (12 characters or longer). Keep the server terminal open during setup; the token is regenerated if the server restarts before setup is completed. Sign in, add the shown TOTP secret to an authenticator app, and verify a code. The app requires this authenticator MFA for every account.
 
-Copy `.env.example` to `.env` only if you want local environment configuration, then set variables in your shell (the server does not load `.env` files automatically). Supported variables include `PORT`, `DATA_BORROWERS`, `DATA_MONTHS`, `DATA_SEED`, `LOCAL_ANALYTICS_MODE`, `LLM_PROVIDER`, `LLM_API_KEY`, `LLM_MODEL`, and `EXASOL_DSN`. Never commit `.env` or credentials.
+IT administrators create employee accounts from **IT administration**. A generated temporary password is displayed once for secure handoff; employees must change it at first sign-in and enroll an authenticator. For forgotten passwords, IT verifies the employee outside the app and issues a reset from that page. There is no public signup or self-service reset. Admins can also reset MFA, assign roles, deactivate accounts, and inspect the security audit log.
+
+Default settings use 10,000 synthetic borrowers, 36 generated monthly periods, seed 42, local analytics, and a deterministic fallback investigation service. If using configured environment bootstrap instead, set `ADMIN_USERNAME` and `ADMIN_PASSWORD` (12+ characters) before starting the server; keep secrets out of source control.
+
+Copy `.env.example` as a reference for local environment configuration, then set variables in your shell (the server does not load `.env` files automatically). Supported settings include `PORT`, `DATA_BORROWERS`, `DATA_MONTHS`, `DATA_SEED`, `SESSION_TIMEOUT_MINUTES`, `LOGIN_MAX_FAILURES`, `LOGIN_LOCKOUT_MINUTES`, `MFA_MAX_ATTEMPTS`, `AUDIT_MAX_EVENTS`, `AUTH_BOOTSTRAP_TOKEN`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `LOCAL_ANALYTICS_MODE`, `LLM_PROVIDER`, `LLM_API_KEY`, `LLM_MODEL`, and `EXASOL_DSN`. Never commit `.env`, setup tokens, or credentials.
 
 ## Generate a dataset file
 
@@ -45,12 +49,16 @@ Follow [docs/DEMO.md](docs/DEMO.md). Start with `BRW-DEMO-001` to show receivabl
 - [docs/API.md](docs/API.md) documents routes and filters.
 - `sql/curated`, `sql/features`, and `sql/risk` contain Exasol-oriented SQL examples with window functions, aggregation, ranking, and time-series comparisons. They are integration examples and have not been run against an Exasol instance.
 
-The local generator creates compact related borrower-level loan, repayment, buyer, risk-event, and monthly metric records. It does not persist 500,000 individual bank transaction rows; the transaction-anomaly feature is generated from historical behavior and demonstrated by a planted synthetic scenario. For a larger production ingest, load normalized source entities into Exasol RAW and build curated/features/risk tables through the supplied SQL pattern.
+The local generator creates compact related borrower-level loan, repayment, buyer, risk-event, and monthly metric records. It does not persist 500,000 individual bank transaction rows; the transaction-anomaly feature is generated from historical behavior and demonstrated by a planted synthetic scenario. The 36-month risk line is generated synthetic history with a seeded portfolio-wide cycle; it is not real historical performance. Product exposure/risk summaries derive from the generated loan records. DPD ageing assigns each generated loan once using the highest generated repayment DPD and is labelled as a demo proxy. The data has no NPA classification, collateral/security details, approved prudential rules, or existing provision balances, so the NPA provision view explicitly reports unavailable rather than estimating a figure. For a larger production ingest, load normalized source entities into Exasol RAW and build curated/features/risk tables through the supplied SQL pattern.
 
 ## AI investigation
 
 The investigation endpoint uses approved domain data and returns structured evidence, counter-evidence, drivers, exposure, confidence, and recommended human follow-up. It works without an LLM key and never fabricates numeric claims. `LLM_*` environment fields are documented as future provider settings; a live LLM adapter is not included in this MVP.
 
+## Authentication and production setup
+
+Passwords use Node.js `scrypt`; MFA uses RFC 6238 time-based one-time passwords compatible with authenticator apps. Sessions are random server-side identifiers in HttpOnly, SameSite=Strict cookies, expire after configurable inactivity, and are invalidated on logout, password reset, MFA reset, or deactivation. Admin/user/session/audit data currently persists in local JSON files under ignored `data/generated/` files. A one-time token printed only when no users exist protects first-admin setup. Configure HTTPS and `NODE_ENV=production` before exposing a deployed instance; production cookies then include `Secure`. Do not expose the local HTTP demo to untrusted networks.
+
 ## Limitations and next steps
 
-The local repository is generated in memory at startup and only interventions persist locally. The current frontend is dependency-free vanilla JavaScript. Exasol connection management, transaction-level raw ingestion, production authentication, external LLM integration, and a validated credit model remain future work. Synthetic scores are demonstrations, not credit advice or a production underwriting model.
+The local portfolio repository is generated in memory at startup. Interventions, account records, sessions, security audit events, and user preferences persist locally as JSON. Exasol connection management, transaction-level raw ingestion, an organization-managed identity provider, external support contacts, approved institution-specific NPA rules/data, external LLM integration, and a validated credit model remain future work. The local JSON auth store is a demo implementation, not a hardened production identity platform. Synthetic scores are demonstrations, not credit advice or a production underwriting model.

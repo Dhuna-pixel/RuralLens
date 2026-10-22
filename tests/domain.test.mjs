@@ -25,3 +25,9 @@ test('what-if recomputes a scenario without mutating the current score',()=>{
 test('dataset relations and dashboard totals are coherent',()=>{
  const d=createDataset({borrowers:50,months:12,seed:3}),dash=dashboard(d);assert.equal(dash.totalBorrowers,50);assert.ok(d.records.every(x=>x.loan.loanId&&x.monthlyMetrics.length===12&&x.repayments.every(r=>r.dueAmount>0)));assert.equal(Object.values(dash.riskCounts).reduce((a,b)=>a+b,0),50);
 });
+test('DPD ageing assigns every valid overdue account once and leaves invalid records unclassified',()=>{
+ const thresholds=[1,30,31,60,61,90,91,179,180,269,270,364,365],d=createDataset({borrowers:15,months:6,seed:4});
+ thresholds.forEach((dpd,i)=>d.records[i].repayments.forEach(r=>r.daysPastDue=dpd));
+ d.records[13].repayments.forEach(r=>r.daysPastDue=0);d.records[14].repayments[0].daysPastDue=null;
+ const x=dashboard(d);assert.deepEqual(x.overdueBuckets.map(b=>b.accounts),[2,2,2,2,2,2,1]);assert.equal(x.currentAccounts,1);assert.equal(x.dpdUnclassifiedAccounts,1);assert.equal(x.overdueBuckets.reduce((s,b)=>s+b.exposure,0),x.overdueExposure);
+});
