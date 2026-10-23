@@ -73,4 +73,4 @@ Borrower **Scenario simulation** opens editable receivable collection, cash-flow
 
 Workspace Settings now saves appearance, accessibility, number display, landing page, portfolio page size/sort and in-app notification preferences per account. Theme changes apply immediately and save automatically. Other preferences require Save; Discard and Restore defaults are available. See [API documentation](docs/API.md) for validation and persistence details.
 
-Team Profile lists real accounts in separate team cards. Administrators can rename teams and update membership; existing employees without a team appear under Unassigned. Interventions require an active person from the selected team. Home opens by default at the root URL and after sign-in.
+Team Profile lists real accounts in separate team cards. Administrators can rename teams and update membership; existing employees without a team appear under Unassigned. Interventions require an active person from the selected team. Home opens by default at the root URL and after sign-in; each user can select another start page in Settings.

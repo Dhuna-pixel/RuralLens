@@ -102,6 +102,18 @@ test('team directory, renaming, membership and intervention validation are integ
  assert.equal((await request('/api/team-members/missing',{method:'PUT',body:JSON.stringify({teamId:'Credit'})})).status,404);
 });
 
+test('admin deletion removes account and directory membership while retaining history',async()=>{
+ assert.equal((await request('/api/auth/users/admin',{method:'DELETE'})).status,400);
+ await request('/api/auth/users',{method:'POST',body:JSON.stringify({username:'delete.fixture',role:'employee',teamId:'Credit'})});
+ assert.equal((await request('/api/auth/users/delete.fixture',{method:'DELETE'})).status,200);
+ const users=await json(await request('/api/auth/users'));assert.ok(!users.items.some(u=>u.username==='delete.fixture'));
+ const directory=await json(await request('/api/teams'));assert.ok(!directory.teams.some(t=>t.members.some(u=>u.username==='delete.fixture')));
+ const audit=await json(await request('/api/auth/audit'));assert.ok(audit.items.some(e=>e.event==='account_deleted'&&e.details.target==='delete.fixture'));
+ const pref=await json(await request('/api/preferences',{method:'PUT',body:JSON.stringify({landingPage:'portfolio'})}));assert.equal(pref.landingPage,'portfolio');
+ assert.equal((await json(await request('/api/preferences'))).landingPage,'portfolio');
+ await request('/api/preferences',{method:'PUT',body:JSON.stringify({landingPage:'home'})});
+});
+
 test('administrator can provision, reset, change role, and deactivate accounts',async()=>{
  const created=await json(await request('/api/auth/users',{method:'POST',body:JSON.stringify({username:'employee.one',role:'employee'})}));assert.equal(created.user.mustChangePassword,true);assert.ok(created.temporaryPassword);
  assert.equal((await request('/api/auth/users/employee.one/role',{method:'PATCH',body:JSON.stringify({role:'admin'})})).status,200);
@@ -112,7 +124,7 @@ test('administrator can provision, reset, change role, and deactivate accounts',
  const employee=await json(await request('/api/auth/users',{method:'POST',body:JSON.stringify({username:'employee.two',role:'employee'})}));const adminCookies=new Map(cookieJar);cookieJar.clear();
  const firstLogin=await json(await request('/api/auth/login',{method:'POST',body:JSON.stringify({username:'employee.two',password:employee.temporaryPassword})}));assert.equal(firstLogin.step,'password-change');
  const changed=await json(await request('/api/auth/password-change',{method:'POST',body:JSON.stringify({newPassword:'employee two changed password'})}));assert.equal(changed.step,'mfa-setup');
- assert.equal((await request('/api/auth/mfa/verify',{method:'POST',body:JSON.stringify({code:totp(changed.secret)})})).status,200);const employeeCookies=new Map(cookieJar);
+ assert.equal((await request('/api/auth/mfa/verify',{method:'POST',body:JSON.stringify({code:totp(changed.secret)})})).status,200);const employeeCookies=new Map(cookieJar);assert.equal((await request('/api/auth/users/admin',{method:'DELETE'})).status,403);
  assert.equal((await request('/api/auth/users')).status,403);assert.equal((await request('/api/teams/Credit',{method:'PATCH',body:JSON.stringify({name:'Not allowed'})})).status,403);assert.equal((await request('/api/team-members/employee.two',{method:'PUT',body:JSON.stringify({teamId:'Risk'})})).status,403);assert.equal((await request('/api/teams')).status,200);
  cookieJar=adminCookies;assert.equal((await request('/api/auth/users/employee.two/deactivate',{method:'POST',body:'{}'})).status,200);
  cookieJar=employeeCookies;assert.equal((await request('/api/dashboard')).status,401);
