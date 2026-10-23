@@ -1,3 +1,4 @@
+import { normalizePreferences, updatePreferences } from './preferences.mjs';
 import { randomBytes, randomUUID, scrypt as scryptCb, timingSafeEqual, createHmac } from 'node:crypto';
 import { promisify } from 'node:util';
 import { readFile, writeFile } from 'node:fs/promises';
@@ -41,7 +42,8 @@ export class SecurityStore{
  async resetMfa(username,actor){const u=this.user(username);if(!u)throw Error('Account not found.');u.mfaSecret=null;this.invalidatePending(u.username);for(const[id,s]of this.sessions)if(s.username===u.username)this.sessions.delete(id);await this.persistUsers();await this.persistSessions();await this.log('mfa_reset',actor,{target:u.username});}
  async deactivate(username,actor){const u=this.user(username);if(!u)throw Error('Account not found.');if(u.role==='admin'&&this.users.filter(x=>x.role==='admin'&&x.active).length<=1)throw Error('Cannot deactivate the only active administrator.');u.active=false;this.invalidatePending(u.username);for(const[id,s]of this.sessions)if(s.username===u.username)this.sessions.delete(id);await this.persistUsers();await this.persistSessions();await this.log('account_deactivated',actor,{target:u.username});}
  async changeRole(username,role,actor){const u=this.user(username);if(!u)throw Error('Account not found.');if(!['admin','employee'].includes(role))throw Error('Choose admin or employee role.');if(u.role==='admin'&&role!=='admin'&&this.users.filter(x=>x.role==='admin'&&x.active).length<=1)throw Error('Cannot remove the only active administrator.');const old=u.role;u.role=role;await this.persistUsers();await this.log('role_changed',actor,{target:u.username,from:old,to:role});}
- async preferences(username){const u=this.user(username);return{compactTables:Boolean(u?.preferences?.compactTables)};}
- async savePreferences(username,preferences){const u=this.user(username);if(!u)throw Error('Account not found.');if(typeof preferences.compactTables!=='boolean')throw Error('Invalid workspace preference.');u.preferences={...u.preferences,compactTables:preferences.compactTables};await this.persistUsers();await this.log('workspace_preference_changed',username,{compactTables:preferences.compactTables});return this.preferences(username);}
+ async preferences(username){const u=this.user(username);return normalizePreferences(u?.preferences);}
+ async savePreferences(username,patch){const u=this.user(username);if(!u)throw Error('Account not found.');const next=updatePreferences(u.preferences,patch);u.preferences=next;await this.persistUsers();await this.log('workspace_preference_changed',username,{preferences:next});return next;}
+
 }
 export { safeUser, departments };

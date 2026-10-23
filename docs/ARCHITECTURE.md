@@ -27,3 +27,7 @@ flowchart LR
 Dashboard product summaries are grouped from the one generated loan record per borrower. Overdue buckets use each generated loan's highest repayment DPD as an explicitly documented demonstration proxy. The 36-month line is synthetic seeded history with a small shared portfolio cycle; it is not real-world history. NPA provisioning is unavailable until classifications, secured exposure inputs, existing balances, and institution-approved rules are supplied.
 
 Human review language is shown in the product. The system does not approve, reject, restructure loans, assert fraud, or contact borrowers.
+
+## Portfolio provisioning and recovery extension
+
+See [Provisioning and recovery](PROVISIONING_RECOVERY.md) for the integrated services, persistent stores, classification and calculation semantics, API routes and regulatory scope.

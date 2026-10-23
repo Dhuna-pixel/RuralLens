@@ -23,3 +23,7 @@ The generator creates linked synthetic records under an in-memory repository. Id
 The current UI uses representative repayment rows, monthly metric series, buyer rows, and event records generated as related borrower features. The separate Exasol SQL path documents how to curate normalized source entities into a borrower-month analytical feature table. Generated values are illustrative only.
 
 Risk score is `0.25 * repayment + 0.20 * cash flow + 0.20 * receivables + 0.15 * business + 0.10 * concentration + 0.10 * transaction anomaly`. Each component is clamped to 0–100 before weighting. Tiers: LOW 0–29, MODERATE 30–59, HIGH 60–79, CRITICAL 80–100.
+
+## Portfolio provisioning and recovery extension
+
+See [Provisioning and recovery](PROVISIONING_RECOVERY.md) for the integrated services, persistent stores, classification and calculation semantics, API routes and regulatory scope.
