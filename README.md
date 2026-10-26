@@ -62,6 +62,8 @@ For a different port:
 PORT=3001 npm start
 ```
 
+For a full local run guide and a reference HTTPS deployment on one Linux server, see the [deployment and run guide](docs/DEPLOYMENT_RUN_GUIDE.md).
+
 ### Exasol setup
 
 Follow the [Exasol integration guide](docs/EXASOL.md) to configure a database connection, import the synthetic portfolio, and validate the SQL results before enabling Exasol mode.
@@ -115,6 +117,7 @@ Generated data, accounts, sessions, and workflow records are stored under ignore
 
 ## Documentation
 
+- [Deployment and run guide](docs/DEPLOYMENT_RUN_GUIDE.md)
 - [Demo walkthrough](docs/DEMO.md)
 - [Exasol integration](docs/EXASOL.md)
 - [Architecture](docs/ARCHITECTURE.md)
