@@ -18,6 +18,6 @@ export class PortfolioRepository{
  dashboard(){return dashboard(this.dataset);}
  getBorrower(id){return this.dataset.records.find(x=>x.borrower.borrowerId===id)??null;}
  search(filters={}){return this.dataset.records.filter(x=>matches(x,filters)).sort((a,b)=>{const key=filters.sort;const value=x=>key==='dpd'?x.provisioning?.daysPastDue??-1:key==='outstanding'?x.loan.outstandingAmount:key==='provision'?x.provisioning?.requiredProvision??-1:key==='shortfall'?x.provisioning?.provisionShortfall??-1:x.risk.overallScore;return(value(b)-value(a))*(filters.order==='asc'?-1:1);});}
- alerts(filters={}){return this.search(filters).filter(x=>x.risk.overallScore>=30);}
+ alerts(filters={}){return this.search(filters).filter(x=>filters.tier?.toUpperCase()==='LOW'||x.risk.overallScore>=30);}
  page(records,page=1,limit=50){const size=Math.min(100,Math.max(1,Number(limit)||50)),index=Math.max(1,Number(page)||1);return{items:records.slice((index-1)*size,index*size).map(summary),total:records.length,page:index,limit:size};}
 }

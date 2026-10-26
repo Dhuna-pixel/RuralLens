@@ -1,6 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDataset, scoreFeatures, investigate, simulate, dashboard } from '../backend/domain.mjs';
+import { PortfolioRepository } from '../backend/repository.mjs';
+
+test('alert tier filters expose existing low risk borrowers while default alerts stay prioritized',()=>{
+ const repository=new PortfolioRepository(createDataset({borrowers:50,months:12,seed:42}));
+ const low=repository.alerts({tier:'LOW'});
+ assert.ok(low.length>0);
+ assert.deepEqual(low,repository.search({tier:'LOW'}));
+ assert.ok(repository.alerts().every(x=>x.risk.overallScore>=30));
+ const state=low[0].borrower.state;
+ assert.ok(repository.alerts({tier:'LOW',state}).every(x=>x.borrower.state===state));
+});
 
 test('risk score uses documented component weights and bounded tiers',()=>{
  const zero=Object.fromEntries(['dpd30','dpd60','missed','cashflowGrowth','cashflowVolatility','inflowChange','over60Ratio','receivableGrowth','collectionDelay','revenueGrowth','marginChange','inventoryGrowth','lateBuyerShare','transactionShift','transactionVolatility'].map(k=>[k,0]));

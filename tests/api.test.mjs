@@ -8,7 +8,8 @@ import { join } from 'node:path';
 import { totp } from '../backend/security.mjs';
 
 const port=31000+Math.floor(Math.random()*10000),base=`http://127.0.0.1:${port}`;
-let child,store,cookieJar=new Map();
+let child,store,cookieJar=new Map(),itCookies;
+async function requestIT(path,options={}){const saved=cookieJar;cookieJar=new Map(itCookies);try{return await request(path,options);}finally{itCookies=new Map(cookieJar);cookieJar=saved;}}
 function cookieHeader(){return[...cookieJar].map(([k,v])=>`${k}=${v}`).join('; ');}
 async function request(path,options={}){const headers={'content-type':'application/json',...(options.headers||{})},cookie=cookieHeader();if(cookie)headers.cookie=cookie;const r=await fetch(base+path,{cache:'no-store',...options,headers});for(const raw of (r.headers.getSetCookie?.()??[r.headers.get('set-cookie')].filter(Boolean))){const [pair,...attrs]=raw.split(';'),i=pair.indexOf('='),name=pair.slice(0,i),value=pair.slice(i+1);if(attrs.some(x=>x.trim().toLowerCase()==='max-age=0'))cookieJar.delete(name);else cookieJar.set(name,value);}return r;}
 const json=async r=>r.json();
@@ -35,6 +36,12 @@ test('bootstrap is one-time, protected APIs require MFA, and admin sessions are 
  assert.equal((await json(await request('/api/preferences'))).compactTables,false);
  assert.equal((await json(await request('/api/preferences',{method:'PUT',body:JSON.stringify({compactTables:true})}))).compactTables,true);
  assert.equal((await json(await request('/api/auth/users'))).items.length,1);
+ const fixture=await json(await request('/api/auth/users',{method:'POST',body:JSON.stringify({username:'fixture.it',role:'employee',teamId:'IT'})}));
+ const saved=new Map(cookieJar);cookieJar.clear();
+ await request('/api/auth/login',{method:'POST',body:JSON.stringify({username:'fixture.it',password:fixture.temporaryPassword})});
+ const enrollment=await json(await request('/api/auth/password-change',{method:'POST',body:JSON.stringify({newPassword:'fixture IT changed password'})}));
+ await request('/api/auth/mfa/verify',{method:'POST',body:JSON.stringify({code:totp(enrollment.secret)})});itCookies=new Map(cookieJar);cookieJar=saved;
+
  assert.equal((await request('/api/auth/bootstrap',{method:'POST',body:JSON.stringify({token:'test-only-setup-token',username:'another',password:'correct horse battery staple'})})).status,409);
 });
 
@@ -50,12 +57,29 @@ test('dashboard product, risk, DPD, 36-month trend, and NPA availability data re
  const scenario=await json(await request('/api/borrowers/BRW-DEMO-001/scenario',{method:'POST',body:JSON.stringify({collectLargest:true})}));assert.ok(scenario.projected.score<scenario.current.score);
 });
 
-test('interventions only accept eligible risky borrowers and the six departments',async()=>{
+test('CXO assigns interventions to eligible borrowers and operational teams',async()=>{
+ assert.equal((await request('/api/interventions',{method:'POST',body:'{}'})).status,403);
+ await requestIT('/api/team-members/admin',{method:'PUT',body:JSON.stringify({teamId:'CXO'})});
  const eligible=await json(await request('/api/intervention-eligible'));assert.ok(eligible.items.some(x=>x.borrowerId==='BRW-DEMO-001'));
+ assert.equal((await request('/api/auth/users')).status,403);
+ const queued=await json(await request('/api/interventions',{method:'POST',body:JSON.stringify({borrowerId:'BRW-DEMO-001',teamId:'Operations',recommendedAction:'Validate operational records'})}));assert.equal(queued.assignedMember,null);assert.equal(queued.teamId,'Operations');
  const badDepartment=await request('/api/interventions',{method:'POST',body:JSON.stringify({borrowerId:'BRW-DEMO-001',recommendedAction:'Verify outstanding invoices',assignedTo:'Credit team'})});assert.equal(badDepartment.status,400);
- await request('/api/auth/users',{method:'POST',body:JSON.stringify({username:'credit.member',role:'employee',teamId:'Credit'})});
- const good=await request('/api/interventions',{method:'POST',body:JSON.stringify({borrowerId:'BRW-DEMO-001',recommendedAction:'Verify outstanding invoices',assignedTo:'Credit',assignedMember:'credit.member'})});assert.equal(good.status,201);const action=await json(good);assert.equal(action.assignedTo,'Credit');
+ await requestIT('/api/auth/users',{method:'POST',body:JSON.stringify({username:'credit.member',role:'employee',teamId:'Credit',jobTitle:'Credit analyst'})});
+ const good=await request('/api/interventions',{method:'POST',body:JSON.stringify({borrowerId:'BRW-DEMO-001',recommendedAction:'Verify outstanding invoices',assignedTo:'Credit'})});assert.equal(good.status,201);const action=await json(good);assert.equal(action.assignedTo,'Credit');assert.equal(action.assignedMember,null);
+ assert.equal((await request('/api/interventions',{method:'POST',body:JSON.stringify({borrowerId:'BRW-DEMO-001',recommendedAction:'Direct assignment blocked',teamId:'Credit',assignedMember:'credit.member'})})).status,400);
+ assert.equal((await request('/api/interventions/'+action.interventionId,{method:'PATCH',body:JSON.stringify({action:'assign',assignedMember:'credit.member'})})).status,403);
  const borrower=await json(await request('/api/borrowers/BRW-DEMO-001'));assert.equal(borrower.interventions[0].recommendedAction,'Verify outstanding invoices');
+ const endpoint='/api/interventions/'+action.interventionId;
+ await requestIT('/api/team-members/admin',{method:'PUT',body:JSON.stringify({teamId:'Operations'})});
+ assert.equal((await request(endpoint,{method:'PATCH',body:JSON.stringify({action:'complete',details:'Wrong team'})})).status,403);
+ await requestIT('/api/team-members/admin',{method:'PUT',body:JSON.stringify({teamId:'Credit'})});
+ await requestIT('/api/teams/Credit/head',{method:'PUT',body:JSON.stringify({username:'admin'})});
+ assert.equal((await request(endpoint,{method:'PATCH',body:JSON.stringify({action:'assign',assignedMember:'admin'})})).status,200);
+ const closed=await json(await request(endpoint,{method:'PATCH',body:JSON.stringify({action:'complete',details:'Invoices verified'})}));assert.equal(closed.status,'Closed');assert.ok(closed.assignedOn);assert.ok(closed.closedOn);assert.ok(Number.isInteger(closed.turnaroundDays));assert.equal(closed.history.length,2);
+ await requestIT('/api/team-members/admin',{method:'PUT',body:JSON.stringify({teamId:'CXO'})});
+ for(const action of ['approve','redo'])assert.equal((await request(endpoint,{method:'PATCH',body:JSON.stringify({action,details:'No longer supported'})})).status,400);
+ await requestIT('/api/team-members/admin',{method:'PUT',body:JSON.stringify({teamId:'IT'})});
+ assert.equal((await json(await request('/api/interventions'))).items.length,0);
 });
 
 test('portfolio APIs expose persisted provisioning, filtering, recovery and audit',async()=>{
@@ -87,19 +111,21 @@ test('account settings persist and analysis endpoints validate assumptions and r
 });
 
 test('team directory, renaming, membership and intervention validation are integrated',async()=>{
- const directory=await json(await request('/api/teams'));assert.equal(directory.teams.find(t=>t.id==='IT').members.some(u=>u.username==='admin'),true);assert.ok(directory.teams.find(t=>t.id==='Credit').members.some(u=>u.username==='credit.member'));assert.equal(JSON.stringify(directory).includes('passwordHash'),false);
+ const directory=await json(await request('/api/teams'));assert.equal(directory.teams.find(t=>t.id==='Credit').members.find(u=>u.username==='credit.member').jobTitle,'Credit analyst');assert.equal(directory.teams.find(t=>t.id==='IT').members.some(u=>u.username==='admin'),true);assert.ok(directory.teams.find(t=>t.id==='Credit').members.some(u=>u.username==='credit.member'));assert.equal(JSON.stringify(directory).includes('passwordHash'),false);
  assert.equal((await request('/api/teams/Credit',{method:'PATCH',body:JSON.stringify({name:'Credit Review',description:'Credit review team'})})).status,200);
  assert.equal((await json(await request('/api/teams'))).teams.find(t=>t.id==='Credit').name,'Credit Review');
  assert.equal((await request('/api/teams/Credit',{method:'PATCH',body:JSON.stringify({name:'Business'})})).status,400);
- const created=await json(await request('/api/auth/users',{method:'POST',body:JSON.stringify({username:'unassigned.member',role:'employee'})}));assert.ok(created.user);
+ const created=await json(await requestIT('/api/auth/users',{method:'POST',body:JSON.stringify({username:'unassigned.member',role:'employee'})}));assert.ok(created.user);
  assert.ok((await json(await request('/api/teams'))).unassigned.some(u=>u.username==='unassigned.member'));
+ await requestIT('/api/team-members/admin',{method:'PUT',body:JSON.stringify({teamId:'CXO'})});
  const action={borrowerId:'BRW-DEMO-001',recommendedAction:'Review loan records',teamId:'Credit',assignedMember:'unassigned.member'};
  assert.equal((await request('/api/interventions',{method:'POST',body:JSON.stringify(action)})).status,400);
- assert.equal((await request('/api/team-members/unassigned.member',{method:'PUT',body:JSON.stringify({teamId:'Credit'})})).status,200);
- const assigned=await request('/api/interventions',{method:'POST',body:JSON.stringify(action)});assert.equal(assigned.status,201,await assigned.clone().text());assert.equal((await json(assigned)).teamName,'Credit Review');
+ assert.equal((await requestIT('/api/team-members/unassigned.member',{method:'PUT',body:JSON.stringify({teamId:'Credit'})})).status,200);
+ const assigned=await request('/api/interventions',{method:'POST',body:JSON.stringify({...action,assignedMember:null})});assert.equal(assigned.status,201,await assigned.clone().text());assert.equal((await json(assigned)).teamName,'Credit Review');
  assert.equal((await request('/api/interventions',{method:'POST',body:JSON.stringify({...action,assignedMember:'admin'})})).status,400);
- const history=await json(await request('/api/interventions'));assert.equal(history.total,history.items.length);assert.ok(history.items.some(a=>a.assignedMember==='unassigned.member'));
- assert.equal((await request('/api/team-members/missing',{method:'PUT',body:JSON.stringify({teamId:'Credit'})})).status,404);
+ const history=await json(await request('/api/interventions'));assert.equal(history.total,history.items.length);assert.ok(history.items.some(a=>a.recommendedAction==='Review loan records'&&a.assignedMember===null));
+ await requestIT('/api/team-members/admin',{method:'PUT',body:JSON.stringify({teamId:'IT'})});
+ assert.equal((await requestIT('/api/team-members/missing',{method:'PUT',body:JSON.stringify({teamId:'Credit'})})).status,404);
 });
 
 test('admin deletion removes account and directory membership while retaining history',async()=>{

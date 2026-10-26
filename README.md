@@ -4,6 +4,10 @@
 
 RuralLens is a rural lending intelligence MVP that monitors synthetic borrowers, highlights emerging risk, investigates evidence, simulates scenarios, and records human-reviewed interventions. It is decision support; authorized credit personnel retain all decisions.
 
+## Exasol connection
+
+An explicit Exasol backend and SQL scoring pipeline are available. See [connection setup and validation](docs/EXASOL.md). The application uses local mode until a live import is verified and Exasol mode is selected.
+
 ## Start locally
 
 Requirements: Node.js 20 or newer. The app uses built-in Node modules and has no install step.
@@ -74,3 +78,13 @@ Borrower **Scenario simulation** opens editable receivable collection, cash-flow
 Workspace Settings now saves appearance, accessibility, number display, landing page, portfolio page size/sort and in-app notification preferences per account. Theme changes apply immediately and save automatically. Other preferences require Save; Discard and Restore defaults are available. See [API documentation](docs/API.md) for validation and persistence details.
 
 Team Profile lists real accounts in separate team cards. Administrators can rename teams and update membership; existing employees without a team appear under Unassigned. Interventions require an active person from the selected team. Home opens by default at the root URL and after sign-in; each user can select another start page in Settings.
+
+## Team task workflow
+
+CXO assigns tasks to one of the seven operational teams. Its department head selects an active member once; member reassignment is rejected. Only the assigned member can submit completion details, which immediately finishes the task and records its closure time. There is no separate CXO approval, redo or final-close action. Historical review and allocation records remain visible. Previously submitted tasks awaiting review migrate to finished tasks at their recorded completion time.
+
+Only IT members manage accounts, teams and memberships. CXO and IT can appoint department heads. Teams see only their own interventions, including in notifications and borrower histories.
+
+Task responses include `assignedOn`, `closedOn` and `turnaroundDays`. Turnaround is the whole number of elapsed 24-hour days, rounded down; under 24 hours is 0 days. Assignment means the original CXO assignment to the team. Existing closed tasks retain their historical closure timestamps. Unknown timing stays unavailable.
+
+For an explicitly requested demo roster, stop the server and run `node scripts/seed-demo-teams.mjs` before restarting. Demo executives include CEO, COO, CRO, CFO and CTO, with a head/member pair per operational team. Existing accounts, credentials and history are retained. Temporary credentials are saved in ignored `data/generated/demo-team-credentials.json`; first sign-in requires a password change and MFA. The existing `demo.cxo.leader` login represents CEO.

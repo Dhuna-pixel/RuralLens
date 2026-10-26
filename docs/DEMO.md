@@ -16,7 +16,7 @@
 4. Review its synthetic HIGH tier and receivable, cash-flow, repayment, and concentration components. Revenue remains broadly stable.
 5. Choose **Run investigation** to retrieve profile, exposure, repayment, cash-flow, ageing, buyer, business, historical, event, and score evidence.
 6. Choose **Scenario simulation** to see the illustrative score after the two largest receivables are collected. Treat it as a what-if, not a forecast.
-7. Open **Interventions**, select an eligible High/Critical borrower and one of Business, Credit, Risk, Collection, Recovery, or Legal, then record a human-reviewed follow-up.
+7. Sign in as a CXO team member. Open **Interventions**, select an eligible High/Critical borrower and one of Business, Credit, Risk, Collection, Recovery, Legal, or Operations, then assign the follow-up to that team. Sign in as that department head and allocate the task to an active member. Sign in as the assigned member and submit completion details to finish the task immediately. No separate CXO approval is required.
 8. Use the notification bell for current risk alerts and recorded intervention updates. Use the Credit Operations menu for Team Profile, Workspace Settings, and About RuralLens. Help and FAQs are in the sidebar and top bar.
 
 Other seeded borrowers: `BRW-DEMO-002` healthy seasonal borrower, `BRW-DEMO-003` buyer concentration, `BRW-DEMO-004` structural decline, `BRW-DEMO-005` transaction anomaly, and `BRW-DEMO-006` temporary seasonal stress and recovery.
