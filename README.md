@@ -4,6 +4,12 @@
 
 RuralLens is a rural lending intelligence MVP that monitors synthetic borrowers, highlights emerging risk, investigates evidence, simulates scenarios, and records human-reviewed interventions. It is decision support; authorized credit personnel retain all decisions.
 
+## Problem statement
+
+CXOs at rural lending institutions can’t get a clear, timely view of portfolio health because today’s approach relies on fragmented reports and detailed account-level reviews to reveal risks and pending actions.
+
+If this worked, they could see portfolio performance, emerging risks, and intervention progress at a glance, then direct the right teams without digging into individual accounts.
+
 ## Exasol connection
 
 An explicit Exasol backend and SQL scoring pipeline are available. See [connection setup and validation](docs/EXASOL.md). The application uses local mode until a live import is verified and Exasol mode is selected.
