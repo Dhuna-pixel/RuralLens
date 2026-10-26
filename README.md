@@ -125,4 +125,8 @@ Generated data, accounts, sessions, and workflow records are stored under ignore
 - [API reference](docs/API.md)
 - [Provisioning and recovery](docs/PROVISIONING_RECOVERY.md)
 
+## License
+
+RuralLens is distributed under the [MIT License](LICENSE).
+
 RuralLens is a synthetic decision-support prototype. Its scores, scenarios, and provisioning examples are not a validated credit model or institution-approved regulatory calculations. Authorized personnel retain lending decisions. The local JSON account store is intended for demonstration; production deployment requires further security work and HTTPS.
