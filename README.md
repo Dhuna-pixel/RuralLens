@@ -2,6 +2,10 @@
 
 **Portfolio clarity for CXOs. Timely action for teams.**
 
+## Demo video
+
+[Watch or download the RuralLens demo video](https://github.com/Dhuna-pixel/RuralLens/raw/refs/heads/main/demo%20video.mov).
+
 ## Overview
 
 RuralLens is a rural lending portfolio monitoring system built for Exathon. It gives CXOs a consolidated view of portfolio health, emerging risks, and intervention progress, with borrower details available when further investigation is needed.
